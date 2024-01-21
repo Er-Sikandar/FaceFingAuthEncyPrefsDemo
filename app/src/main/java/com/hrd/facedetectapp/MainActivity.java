@@ -41,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
         encyPrefs.setPrefsString("Name","Sikandar Vishwakarma");
         Log.e(TAG, "onCreate: "+encyPrefs.getPrefsString("Name"));
         startActivity(new Intent(this, CallRecActivity.class));
-
+        finish();
 
 
     }

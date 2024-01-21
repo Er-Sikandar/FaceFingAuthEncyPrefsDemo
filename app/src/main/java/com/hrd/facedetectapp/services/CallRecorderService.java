@@ -10,35 +10,52 @@ import android.os.Environment;
 import android.os.IBinder;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
 
 import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.UUID;
 
 
 public class CallRecorderService extends Service {
     private MediaRecorder mRecorder;
     private boolean isRecording = false;
-    private PhoneStateListener phoneStateListener = new PhoneStateListener() {
-        @Override
-        public void onCallStateChanged(int state, String incomingNumber) {
-            super.onCallStateChanged(state, incomingNumber);
-            switch (state) {
-                case TelephonyManager.CALL_STATE_IDLE:
-                    stopRecording();
-                    break;
-                case TelephonyManager.CALL_STATE_OFFHOOK:
-                    startRecording(incomingNumber);
-                    break;
-                case TelephonyManager.CALL_STATE_RINGING:
-                    break;
-                default:
-                    break;
+    private TelephonyManager telephonyManager;
+    private PhoneStateListener phoneStateListener;
+
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        phoneStateListener = new PhoneStateListener() {
+            @Override
+            public void onCallStateChanged(int state, String phoneNumber) {
+                switch (state) {
+                    case TelephonyManager.CALL_STATE_IDLE:
+                        // Call ended
+                        stopRecording();
+                        break;
+                    case TelephonyManager.CALL_STATE_OFFHOOK:
+                       startRecording();
+                        break;
+                    case TelephonyManager.CALL_STATE_RINGING:
+                        // Incoming call
+                        break;
+                }
             }
-        }
-    };
+        };
+        telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
+
+        return START_STICKY;
+    }
+
     @Override
     public void onDestroy() {
+        stopRecording();
         super.onDestroy();
     }
     @Nullable
@@ -46,7 +63,7 @@ public class CallRecorderService extends Service {
     public IBinder onBind(Intent intent) {
         return null;
     }
-    private void startRecording(String number) {
+    private void startRecording() {
         try {
             String savePath = Environment.getExternalStorageDirectory().getAbsolutePath();
             savePath += "/SikRecorded";
@@ -54,7 +71,10 @@ public class CallRecorderService extends Service {
             if (!file.exists()) {
                 file.mkdir();
             }
-            savePath += "/record_" + System.currentTimeMillis() + ".amr";
+
+            String uuid = UUID.randomUUID().toString();
+            String uuid16digits = uuid.substring(uuid.length() - 8);
+            savePath += "/record_"+uuid16digits+"_" + System.currentTimeMillis() + ".amr";
             mRecorder = new MediaRecorder();
            /* SharedPreferences sPrefs = getSharedPreferences(Constants.PREFERENCES_NAME, Context.MODE_PRIVATE);
             int inputSource = sPrefs.getInt(Constants.SOURCE_INPUT, Constants.SOURCE_VOICE_CALL);
@@ -64,13 +84,16 @@ public class CallRecorderService extends Service {
                     increaseSpeakerVolume();
                     break;
             }*/
-           /* mRecorder.setAudioSource(inputSource);
-            mRecorder.setOutputFormat(outputSource);
+
+            mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+            mRecorder.setOutputFormat(MediaRecorder.OutputFormat.AAC_ADTS);
+
             mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
             mRecorder.setOutputFile(savePath);
             mRecorder.prepare();
             mRecorder.start();
-            isRecording = true;*/
+            isRecording = true;
+
         } catch (Exception ex) {
             ex.printStackTrace();
         }
