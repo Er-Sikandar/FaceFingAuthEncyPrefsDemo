@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">FaceDetectApp</string>
+    <string name="lock_enable_msg">Please, Activate Finger/Facial recognition for your app by go to settings.</string>
+
+
+</resources>
